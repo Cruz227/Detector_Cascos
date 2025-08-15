@@ -101,6 +101,51 @@
                 </div>
             </article>
         </section>
+                    <article class="card">
+                <header>
+                    <h3>
+                        <i class="fas fa-camera-retro" aria-hidden="true"></i> 
+                        Fuente de Video
+                    </h3>
+                </header>
+                
+                <div class="video-source-controls">
+                    <div class="input-group">
+                        <label for="videoSource">Seleccionar fuente:</label>
+                        <select id="videoSource" class="source-select">
+                            <option value="video_0">Video: video_prueba2.mp4</option>
+                            <option value="webcam_0">Cámara 0 (Principal)</option>
+                            <option value="webcam_1">Cámara 1 (Secundaria)</option>
+                            <option value="webcam_2">Cámara 2 (Externa)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="controls-grid">
+                        <button id="changeVideoSource" 
+                                class="control-button btn-primary"
+                                type="button"
+                                aria-label="Cambiar fuente de video">
+                            <i class="fas fa-sync-alt" aria-hidden="true"></i> 
+                            Cambiar Fuente
+                        </button>
+                        
+                        <button id="testVideoSource" 
+                                class="control-button btn-warning"
+                                type="button"
+                                aria-label="Probar fuente seleccionada">
+                            <i class="fas fa-play-circle" aria-hidden="true"></i> 
+                            Probar Fuente
+                        </button>
+                    </div>
+                    
+                    <div class="source-info">
+                        <small id="currentSourceInfo" class="source-status">
+                            <i class="fas fa-info-circle"></i> 
+                            Fuente actual: Video de prueba
+                        </small>
+                    </div>
+                </div>
+            </article>
 
         <!-- Barra lateral (derecha) -->
         <aside class="sidebar">

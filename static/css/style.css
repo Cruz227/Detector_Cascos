@@ -396,3 +396,98 @@ body {
         gap: 10px;
     }
 }
+
+/* AGREGAR AL FINAL DE static/css/style.css */
+
+/* ===== CONTROLES DE FUENTE DE VIDEO ===== */
+.video-source-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.source-select {
+    width: 100%;
+    padding: 12px 15px;
+    border: 2px solid #e5e7eb;
+    border-radius: 10px;
+    font-size: 1rem;
+    background: white;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.source-select:focus {
+    outline: none;
+    border-color: #474953;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.source-select:hover {
+    border-color: #9ca3af;
+}
+
+.source-info {
+    background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+    padding: 10px 15px;
+    border-radius: 8px;
+    border-left: 4px solid #0ea5e9;
+}
+
+.source-status {
+    color: #0369a1;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.source-status i {
+    color: #0ea5e9;
+}
+
+/* Estados de la fuente */
+.source-status.active {
+    color: #059669;
+}
+
+.source-status.active i {
+    color: #10b981;
+}
+
+.source-status.error {
+    color: #dc2626;
+}
+
+.source-status.error i {
+    color: #ef4444;
+}
+
+.source-status.loading {
+    color: #d97706;
+}
+
+.source-status.loading i {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Mejoras responsivas para controles de fuente */
+@media (max-width: 768px) {
+    .video-source-controls {
+        gap: 12px;
+    }
+    
+    .source-select {
+        padding: 10px 12px;
+        font-size: 0.9rem;
+    }
+    
+    .source-info {
+        padding: 8px 12px;
+    }
+}

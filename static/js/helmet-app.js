@@ -31,6 +31,9 @@ class HelmetDetectionApp {
     init() {
         this.initializeElements();
         this.setupEventListeners();
+        this.setupSourceEventListeners();
+        this.initializeSourceElements();
+
         this.startUpdates();
         this.log('Sistema iniciado correctamente');
     }
@@ -93,6 +96,215 @@ class HelmetDetectionApp {
             console.error('Elementos DOM faltantes:', missingElements);
         }
     }
+    
+    /**
+ * Inicializa elementos adicionales para controles de fuente
+ */
+initializeSourceElements() {
+    // Agregar elementos de fuente a this.elements
+    this.elements.videoSource = document.getElementById('videoSource');
+    this.elements.changeVideoSource = document.getElementById('changeVideoSource');
+    this.elements.testVideoSource = document.getElementById('testVideoSource');
+    this.elements.currentSourceInfo = document.getElementById('currentSourceInfo');
+    
+    // Cargar fuentes disponibles
+    this.loadAvailableSources();
+}
+
+/**
+ * Configura event listeners adicionales para fuentes
+ */
+setupSourceEventListeners() {
+    // Cambiar fuente de video
+    this.elements.changeVideoSource?.addEventListener('click', 
+        () => this.changeVideoSource());
+    
+    // Probar fuente seleccionada
+    this.elements.testVideoSource?.addEventListener('click', 
+        () => this.testVideoSource());
+    
+    // Cambio en selector
+    this.elements.videoSource?.addEventListener('change', 
+        () => this.updateSourceInfo());
+}
+
+/**
+ * Carga las fuentes disponibles desde el backend
+ */
+async loadAvailableSources() {
+    try {
+        const response = await fetch('/api/video_sources');
+        if (response.ok) {
+            const sources = await response.json();
+            this.populateSourceSelector(sources);
+        }
+    } catch (error) {
+        console.error('Error cargando fuentes:', error);
+    }
+}
+
+/**
+ * Puebla el selector con las fuentes disponibles
+ */
+populateSourceSelector(sources) {
+    if (!this.elements.videoSource) return;
+    
+    this.elements.videoSource.innerHTML = '';
+    
+    sources.forEach(source => {
+        const option = document.createElement('option');
+        option.value = source.value;
+        option.textContent = source.name;
+        option.dataset.type = source.type;
+        option.dataset.id = source.id;
+        this.elements.videoSource.appendChild(option);
+    });
+    
+    // Marcar fuente actual
+    this.updateCurrentSource();
+}
+
+/**
+ * Actualiza la información de la fuente actual
+ */
+updateSourceInfo() {
+    if (!this.elements.videoSource || !this.elements.currentSourceInfo) return;
+    
+    const selectedOption = this.elements.videoSource.selectedOptions[0];
+    if (selectedOption) {
+        this.elements.currentSourceInfo.innerHTML = 
+            `<i class="fas fa-info-circle"></i> Seleccionado: ${selectedOption.textContent}`;
+    }
+}
+
+/**
+ * Cambia la fuente de video
+ */
+async changeVideoSource() {
+    if (!this.elements.videoSource || !this.elements.changeVideoSource) return;
+    
+    const selectedValue = this.elements.videoSource.value;
+    
+    if (!selectedValue) {
+        this.showNotification('Por favor selecciona una fuente de video', 'warning');
+        return;
+    }
+
+    try {
+        this.setButtonLoading(this.elements.changeVideoSource, true, 
+            '<i class="fas fa-spinner fa-spin"></i> Cambiando...');
+        
+        this.updateSourceStatus('loading', 'Cambiando fuente de video...');
+        
+        const response = await fetch('/api/change_video_source', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ source: selectedValue })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            this.showNotification('Fuente de video cambiada correctamente', 'success');
+            this.updateSourceStatus('active', `Activa: ${data.current_source}`);
+            
+            // Forzar actualización del frame
+            setTimeout(() => this.updateFrame(), 1000);
+        } else {
+            this.showNotification(`Error: ${data.error}`, 'error');
+            this.updateSourceStatus('error', 'Error cambiando fuente');
+        }
+        
+    } catch (error) {
+        console.error('Error cambiando fuente:', error);
+        this.showNotification('Error al cambiar fuente de video', 'error');
+        this.updateSourceStatus('error', 'Error de conexión');
+    } finally {
+        setTimeout(() => {
+            this.setButtonLoading(this.elements.changeVideoSource, false,
+                '<i class="fas fa-sync-alt"></i> Cambiar Fuente');
+        }, 2000);
+    }
+}
+
+/**
+ * Prueba la fuente seleccionada
+ */
+async testVideoSource() {
+    if (!this.elements.videoSource || !this.elements.testVideoSource) return;
+    
+    const selectedValue = this.elements.videoSource.value;
+    
+    try {
+        this.setButtonLoading(this.elements.testVideoSource, true,
+            '<i class="fas fa-spinner fa-spin"></i> Probando...');
+        
+        const response = await fetch('/api/test_video_source', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ source: selectedValue })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            this.showNotification('Fuente probada correctamente', 'success');
+        } else {
+            this.showNotification(`Error probando fuente: ${data.error}`, 'error');
+        }
+        
+    } catch (error) {
+        console.error('Error probando fuente:', error);
+        this.showNotification('Error al probar fuente', 'error');
+    } finally {
+        setTimeout(() => {
+            this.setButtonLoading(this.elements.testVideoSource, false,
+                '<i class="fas fa-play-circle"></i> Probar Fuente');
+        }, 2000);
+    }
+}
+
+/**
+ * Actualiza el estado visual de la fuente
+ */
+updateSourceStatus(status, message) {
+    if (!this.elements.currentSourceInfo) return;
+    
+    const icons = {
+        loading: 'fas fa-spinner fa-spin',
+        active: 'fas fa-check-circle',
+        error: 'fas fa-exclamation-triangle',
+        info: 'fas fa-info-circle'
+    };
+    
+    this.elements.currentSourceInfo.className = `source-status ${status}`;
+    this.elements.currentSourceInfo.innerHTML = 
+        `<i class="${icons[status] || icons.info}"></i> ${message}`;
+}
+
+/**
+ * Actualiza la fuente actual seleccionada
+ */
+async updateCurrentSource() {
+    try {
+        const response = await fetch('/api/current_source');
+        if (response.ok) {
+            const data = await response.json();
+            
+            // Seleccionar en el dropdown
+            if (this.elements.videoSource && data.current_value) {
+                this.elements.videoSource.value = data.current_value;
+            }
+            
+            // Actualizar info
+            this.updateSourceStatus('active', `Activa: ${data.current_source}`);
+        }
+    } catch (error) {
+        console.error('Error obteniendo fuente actual:', error);
+    }
+}
+
+
 
     /**
      * Configura los event listeners

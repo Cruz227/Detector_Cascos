@@ -532,7 +532,220 @@ def not_found(error):
 @app.errorhandler(500)
 def internal_error(error):
     return jsonify({'error': 'Error interno del servidor'}), 500
+@app.route('/api/video_sources')
+def api_video_sources():
+    """API para obtener fuentes de video disponibles"""
+    try:
+        sources = config.get_available_sources()
+        return jsonify(sources)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
+@app.route('/api/current_source')
+def api_current_source():
+    """API para obtener la fuente actual"""
+    try:
+        system = get_helmet_system()
+        current_source = config.get_current_source()
+        
+        # Determinar valor actual para el selector
+        if config.USE_WEBCAM:
+            current_value = f"webcam_{config.WEBCAM_ID}"
+        else:
+            current_value = f"video_{config.CURRENT_VIDEO_INDEX}"
+        
+        return jsonify({
+            'current_source': current_source,
+            'current_value': current_value,
+            'use_webcam': config.USE_WEBCAM,
+            'webcam_id': config.WEBCAM_ID,
+            'video_path': config.VIDEO_PATH
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/change_video_source', methods=['POST'])
+def api_change_video_source():
+    """API para cambiar la fuente de video"""
+    try:
+        data = request.get_json()
+        
+        if not data or 'source' not in data:
+            return jsonify({
+                'success': False,
+                'error': 'Fuente no especificada'
+            }), 400
+        
+        source_value = data['source']
+        
+        # Parsear el valor de la fuente (formato: "webcam_0" o "video_1")
+        if source_value.startswith('webcam_'):
+            camera_id = int(source_value.split('_')[1])
+            success = change_to_webcam(camera_id)
+            current_source = f"Cámara {camera_id}"
+        elif source_value.startswith('video_'):
+            video_index = int(source_value.split('_')[1])
+            success = change_to_video(video_index)
+            current_source = f"Video: {config.AVAILABLE_VIDEOS[video_index]}"
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Formato de fuente inválido'
+            }), 400
+        
+        if success:
+            return jsonify({
+                'success': True,
+                'current_source': current_source,
+                'message': f'Cambiado a: {current_source}'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Error cambiando fuente de video'
+            }), 500
+            
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/test_video_source', methods=['POST'])
+def api_test_video_source():
+    """API para probar una fuente de video"""
+    try:
+        data = request.get_json()
+        source_value = data.get('source', '')
+        
+        # Probar la fuente sin cambiarla permanentemente
+        if source_value.startswith('webcam_'):
+            camera_id = int(source_value.split('_')[1])
+            success = test_camera(camera_id)
+            message = f"Cámara {camera_id} {'disponible' if success else 'no disponible'}"
+        elif source_value.startswith('video_'):
+            video_index = int(source_value.split('_')[1])
+            success = test_video_file(video_index)
+            video_name = config.AVAILABLE_VIDEOS[video_index]
+            message = f"Video {video_name} {'disponible' if success else 'no encontrado'}"
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Formato de fuente inválido'
+            }), 400
+        
+        return jsonify({
+            'success': success,
+            'message': message
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+# AGREGAR ESTAS FUNCIONES HELPER AL FINAL DE app.py:
+
+def change_to_webcam(camera_id):
+    """Cambia a una cámara web específica"""
+    try:
+        global helmet_system
+        
+        # Actualizar configuración
+        config.USE_WEBCAM = True
+        config.WEBCAM_ID = camera_id
+        config.VIDEO_SOURCE_TYPE = 'webcam'
+        config.CURRENT_CAMERA_ID = camera_id
+        
+        # Reiniciar sistema de cámara
+        if helmet_system:
+            helmet_system.stop()
+            helmet_system = None
+        
+        # Crear nuevo sistema
+        system = get_helmet_system()
+        system.log_event("CONFIG", f"Cambiado a cámara {camera_id}")
+        
+        return True
+        
+    except Exception as e:
+        print(f"Error cambiando a cámara {camera_id}: {e}")
+        return False
+
+def change_to_video(video_index):
+    """Cambia a un video específico"""
+    try:
+        global helmet_system
+        
+        if video_index >= len(config.AVAILABLE_VIDEOS):
+            return False
+        
+        # Actualizar configuración
+        config.USE_WEBCAM = False
+        config.VIDEO_PATH = config.AVAILABLE_VIDEOS[video_index]
+        config.VIDEO_SOURCE_TYPE = 'video'
+        config.CURRENT_VIDEO_INDEX = video_index
+        
+        # Reiniciar sistema de cámara
+        if helmet_system:
+            helmet_system.stop()
+            helmet_system = None
+        
+        # Crear nuevo sistema
+        system = get_helmet_system()
+        system.log_event("CONFIG", f"Cambiado a video: {config.VIDEO_PATH}")
+        
+        return True
+        
+    except Exception as e:
+        print(f"Error cambiando a video {video_index}: {e}")
+        return False
+
+def test_camera(camera_id):
+    """Prueba si una cámara está disponible"""
+    try:
+        import cv2
+        cap = cv2.VideoCapture(camera_id)
+        
+        if cap.isOpened():
+            ret, frame = cap.read()
+            cap.release()
+            return ret and frame is not None
+        
+        return False
+        
+    except Exception as e:
+        print(f"Error probando cámara {camera_id}: {e}")
+        return False
+
+def test_video_file(video_index):
+    """Prueba si un archivo de video existe y es válido"""
+    try:
+        if video_index >= len(config.AVAILABLE_VIDEOS):
+            return False
+        
+        video_path = config.AVAILABLE_VIDEOS[video_index]
+        
+        # Verificar que el archivo existe
+        import os
+        if not os.path.exists(video_path):
+            return False
+        
+        # Verificar que se puede abrir
+        import cv2
+        cap = cv2.VideoCapture(video_path)
+        
+        if cap.isOpened():
+            ret, frame = cap.read()
+            cap.release()
+            return ret and frame is not None
+        
+        return False
+        
+    except Exception as e:
+        print(f"Error probando video {video_index}: {e}")
+        return False
 # ===== PUNTO DE ENTRADA =====
 # REEMPLAZA LA PARTE FINAL DE app.py (líneas finales) CON ESTO:
 
