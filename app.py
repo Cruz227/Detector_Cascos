@@ -501,6 +501,7 @@ def api_test_notification():
         # Decodificar frame
         import base64
         frame_bytes = base64.b64decode(frame_data)
+        import numpy as np
         frame_array = cv2.imdecode(
             np.frombuffer(frame_bytes, np.uint8), 
             cv2.IMREAD_COLOR
