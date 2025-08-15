@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <!-- Meta tags -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Sistema de Detección de Cascos - Panel de Control en Tiempo Real">
+    <meta name="author" content="TalentoTech">
+    
+    <!-- Título -->
+    <title>Sistema de Detección de Cascos | Control Panel</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    
+    <!-- Estilos externos -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- Estilos locales -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <!-- Indicador de estado de conexión -->
+    <div id="connectionStatus" class="connection-status disconnected">
+        <i class="fas fa-circle"></i> Conectando...
+    </div>
+
+    <!-- Header principal -->
+    <header class="header">
+        <h1>
+            <i class="fas fa-hard-hat" aria-hidden="true"></i> 
+            Sistema de Detección de Cascos
+        </h1>
+        <p>Panel de Control - Monitoreo en Tiempo Real</p>
+    </header>
+
+    <!-- Contenedor principal -->
+    <main class="container">
+        <!-- Panel principal (izquierda) -->
+        <section class="main-panel">
+            <!-- Sección de video -->
+            <article class="card">
+                <header>
+                    <h3>
+                        <i class="fas fa-video" aria-hidden="true"></i> 
+                        Video en Vivo
+                    </h3>
+                </header>
+                
+                <div class="video-container">
+                    <!-- Video feed -->
+                    <img id="videoFeed" 
+                         alt="Stream de video de la cámara de seguridad" 
+                         style="display: none;">
+                    
+                    <!-- Placeholder de carga -->
+                    <div id="videoPlaceholder" class="loading-placeholder">
+                        <i class="fas fa-spinner fa-spin" aria-hidden="true"></i>
+                        &nbsp;&nbsp;Conectando cámara...
+                    </div>
+                    
+                    <!-- Overlay con estados -->
+                    <div class="video-overlay">
+                        <div id="cameraStatus" class="status-badge status-camera">
+                            <i class="fas fa-camera pulse" aria-hidden="true"></i> 
+                            CÁMARA ACTIVA
+                        </div>
+                        <div id="detectionStatus" class="status-badge status-inactive">
+                            <i class="fas fa-times-circle" aria-hidden="true"></i> 
+                            DETECCIÓN INACTIVA
+                        </div>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Sección de controles -->
+            <article class="card">
+                <header>
+                    <h3>
+                        <i class="fas fa-cogs" aria-hidden="true"></i> 
+                        Controles del Sistema
+                    </h3>
+                </header>
+                
+                <div class="controls-grid">
+                    <button id="toggleDetection" 
+                            class="control-button btn-primary"
+                            type="button"
+                            aria-label="Activar o desactivar la detección de cascos">
+                        <i class="fas fa-play" aria-hidden="true"></i> 
+                        Activar Detección
+                    </button>
+                    
+                    <button id="testNotification" 
+                            class="control-button btn-warning"
+                            type="button"
+                            aria-label="Enviar notificación de prueba a Telegram">
+                        <i class="fas fa-bell" aria-hidden="true"></i> 
+                        Probar Notificación
+                    </button>
+                </div>
+            </article>
+        </section>
+
+        <!-- Barra lateral (derecha) -->
+        <aside class="sidebar">
+            <!-- Configuración de Telegram -->
+            <section class="card">
+                <header>
+                    <h3>
+                        <i class="fab fa-telegram" aria-hidden="true"></i> 
+                        Configuración Telegram
+                    </h3>
+                </header>
+                
+                <form onsubmit="return false;">
+                    <div class="input-group">
+                        <label for="chatId">Chat ID:</label>
+                        <input type="text" 
+                               id="chatId" 
+                               name="chatId"
+                               placeholder="Ingrese el Chat ID"
+                               autocomplete="off"
+                               aria-describedby="chatIdHelp">
+                        <small id="chatIdHelp" class="sr-only">
+                            Ingrese el ID del chat de Telegram donde recibir las notificaciones
+                        </small>
+                    </div>
+                    
+                    <button id="updateChatId" 
+                            class="control-button btn-success"
+                            type="button"
+                            aria-label="Guardar el nuevo Chat ID">
+                        <i class="fas fa-save" aria-hidden="true"></i> 
+                        Guardar Chat ID
+                    </button>
+                </form>
+            </section>
+
+            <!-- Estadísticas -->
+            <section class="card">
+                <header>
+                    <h3>
+                        <i class="fas fa-chart-bar" aria-hidden="true"></i> 
+                        Estadísticas
+                    </h3>
+                </header>
+                
+                <div class="stats-grid" role="group" aria-label="Estadísticas del sistema">
+                    <div class="stat-item">
+                        <div id="totalDetections" class="stat-value" aria-label="Total de detecciones">0</div>
+                        <div class="stat-label">Detecciones</div>
+                    </div>
+                    
+                    <div class="stat-item">
+                        <div id="violations" class="stat-value" aria-label="Violaciones detectadas">0</div>
+                        <div class="stat-label">Violaciones</div>
+                    </div>
+                    
+                    <div class="stat-item">
+                        <div id="notifications" class="stat-value" aria-label="Notificaciones enviadas">0</div>
+                        <div class="stat-label">Notificaciones</div>
+                    </div>
+                    
+                    <div class="stat-item">
+                        <div id="uptime" class="stat-value" aria-label="Tiempo de actividad">00:00</div>
+                        <div class="stat-label">Tiempo Activo</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Logs de actividad -->
+            <section class="card">
+                <header>
+                    <h3>
+                        <i class="fas fa-list-alt" aria-hidden="true"></i> 
+                        Registro de Actividad
+                    </h3>
+                </header>
+                
+                <div id="logsContainer" 
+                     class="logs-container" 
+                     role="log" 
+                     aria-label="Registro de eventos del sistema"
+                     aria-live="polite">
+                    <!-- Logs se cargan dinámicamente -->
+                    <div class="log-entry">
+                        <span class="log-timestamp">--:--:--</span>
+                        <span class="log-level log-system">SYSTEM</span>
+                        <span>Iniciando sistema...</span>
+                    </div>
+                </div>
+            </section>
+        </aside>
+    </main>
+
+    <!-- Scripts -->
+<!-- Línea 498 - Scripts -->
+<script src="/static/js/helmet-app.js"></script>
+
+<!-- Línea 602-606 - Configuración -->
+<script>
+    // Configuración global de la aplicación
+    window.HELMET_APP_CONFIG = {
+        apiBaseUrl: window.location.origin,
+        debug: false,
+        version: '1.0.0'
+    };
+</script>
+</body>
+</html>
